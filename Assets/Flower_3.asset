@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6806b5780e13be2449cfbd4b8b1962e8, type: 3}
+  m_Name: Flower_3
+  m_EditorClassIdentifier: 
+  itemID: 3
+  itemName: Flower_3
+  itemIcon: {fileID: 21300000, guid: bded344548f067b418e008df677d3f58, type: 3}
+  itemPrefab: {fileID: 1143931805411576, guid: f71e980e020ab924ebed9a227a648ec8, type: 3}
+  itemDesc: this is flower _3.......
+  itemType: 0
+  maxStackCount: 99
+  coolDownTime: 10
+  totalGrowDays: 3
+  growStageColor:
+  - {r: 1, g: 1, b: 1, a: 0}
+  - {r: 0, g: 0.9716981, b: 0.14666156, a: 0}
+  - {r: 1, g: 0.91732085, b: 0, a: 0}
+  - {r: 0, g: 0, b: 0, a: 0}
