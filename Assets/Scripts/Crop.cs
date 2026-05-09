@@ -15,7 +15,7 @@ public class Crop : MonoBehaviour
 
     private GameObject _progressBarInstance;
 
-    private Vector3 progressBarOffset = new Vector3(0, 2f, 0);
+    private Vector3 progressBarOffset = new Vector3(0, 1.5f, 0);
     private int _currentGrowDay = 0; // 当前生长天数
 
     private CropData _cropData;
@@ -36,12 +36,13 @@ public class Crop : MonoBehaviour
 
     void OnEnable()
     {
+
         // 订阅新的一天事件，每天自动生长
         TimeManager.OnDayChanged += GrowOneDay;
     }
     void Update()
     {
-        if(IsMature)return;
+        //if(IsMature)return;
         UpdateProgressBar();
     }
     void Start()
@@ -84,7 +85,7 @@ public class Crop : MonoBehaviour
             _timeText.text = $"成熟";
             return;
         }
-        float progress = _currentGrowDay / _cropData.totalGrowDays;
+        float progress = (float)_currentGrowDay / _cropData.totalGrowDays;
         _progressFill.fillAmount = progress;
         float remainingDay = _cropData.totalGrowDays - _currentGrowDay;
         _timeText.text = $"剩余{remainingDay}天";
@@ -122,6 +123,11 @@ public class Crop : MonoBehaviour
             // 这里可以替换成你自己的材质变色逻辑
             _material.color = _cropData.growStageColor[stage];
         }
+    }
+
+    public GameObject GetProgressBarInstance()
+    {
+        return _progressBarInstance;
     }
     void OnDisable()
     {

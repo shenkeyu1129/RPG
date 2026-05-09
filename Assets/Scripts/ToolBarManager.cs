@@ -18,6 +18,7 @@ public class ToolBarManager : MonoBehaviour
         // 单例初始化
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+         currentItemSlot = allToolSlots[0]; // 默认选中第一个槽位
     }
 
     private void Start()
@@ -27,7 +28,7 @@ public class ToolBarManager : MonoBehaviour
 
         RefreshAllSlots(); // 刷新显示，确保UI正确
 
-        currentItemSlot = allToolSlots[0]; // 默认选中第一个槽位
+       
     }
 
     void OnEnable()

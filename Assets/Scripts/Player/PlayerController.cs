@@ -1,15 +1,20 @@
+using System;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
     [Header("移动与旋转设置")]
     [SerializeField] private float _moveSpeed;
-    [SerializeField] private float _mouseSensitivity;
+    [SerializeField] private float _rotateSpeed;
+    [SerializeField] private float mouseSensitivity = 100f;
+    private float xRotation = 0f;
 
     [Header("相机设置")]
     [SerializeField] private Transform _cameraRoot; // 请在Inspector拖入你的相机根物体（如Player下的CameraHolder）
+    [SerializeField] private Transform _cameraRootFirstPerson; // 第一人称相机根物体  
 
-    private float _xRotation = 0f;
+
     private CharacterController _controller;
     private Vector3 _velocity;
     [SerializeField] private float _gravity;
@@ -21,15 +26,29 @@ public class PlayerController : MonoBehaviour
 
     public static GameObject CurrentEquipMentObject;
 
+    private bool _isInteracting = false;
+    private bool _canMove = true;
+
+    private string _interactText;
+    private string _interactButtonText;
+
+    private Animator _animator;
+
+    private bool isFirstPerson = false;
+
     void Awake()
     {
         _controller = GetComponent<CharacterController>();
         CurrentFarmLand = null;
         CurrentEquipMentObject = null;
         EquipMentRoot = _equipMentRoot;
+        _animator = GetComponent<Animator>();
     }
 
-
+    void OnEnable()
+    {
+        CameraEvents.Center.AddListener(CameraEvent.SwitchCamera, SwitchCamera);
+    }
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
@@ -41,11 +60,11 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        // 角色自身旋转（左右看）
-        LookRotation();
-
         // 角色移动
-        Move();
+        if (_canMove)
+        {
+            PlayerControl();
+        }
 
         //工具栏切换(1 - 7)
         ChangeObject();
@@ -61,48 +80,137 @@ public class PlayerController : MonoBehaviour
         // 采集检测(没有可获取的物体时什么也不做)
         if (Input.GetKeyDown(KeyCode.F))
         {
+            Debug.Log($"当前可采集物体: {_currentCanGetObject?.name ?? "无"}");
             if (!_currentCanGetObject) return;
+            Debug.Log($"当前可采集物体: {_currentCanGetObject?.name ?? "无"}");
             GetObject(_currentCanGetObject);
+        }
+
+        if (_isInteracting)
+        {
+            if (Input.GetKeyDown(KeyCode.X))
+            {
+                _canMove = false;
+                PlayerEvents.Center.Trigger(PlayerEvent.EnterShop);
+                PlayerEvents.Center.Trigger(PlayerEvent.ExitInteractPanel);
+            }
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                _canMove = true;
+                PlayerEvents.Center.Trigger(PlayerEvent.ExitShop);
+                PlayerEvents.Center.Trigger(PlayerEvent.EnterInteractPanel);
+            }
+        }
+    }
+    #region 核心逻辑拆分
+
+
+
+    //人物控制
+    void PlayerControl()
+    {
+        ReadInput();
+        HandleMove();
+        HandleRotation();
+        HandleAnimation();
+        HandleGravity();
+    }
+
+    float x;
+    float z;
+    Vector3 moveDir;
+    bool isMoving;
+
+    // 输入处理
+    void ReadInput()
+    {
+        x = Input.GetAxis("Horizontal");
+        z = Input.GetAxis("Vertical");
+
+        Vector3 camForward = _cameraRoot.forward;
+        camForward.y = 0;
+        camForward.Normalize();
+
+        Vector3 camRight = _cameraRoot.right;
+        camRight.y = 0;
+        camRight.Normalize();
+
+        moveDir = camRight * x + camForward * z;
+        isMoving = moveDir.magnitude > 0.1f;
+    }
+
+    // 移动处理
+    void HandleMove()
+    {
+        if (!isMoving) return;
+        if (!isFirstPerson)
+        {
+            _controller.Move(_moveSpeed * Time.deltaTime * moveDir);
+        }
+        else
+        {
+            Vector3 forward = transform.forward;
+        Vector3 right = transform.right;
+
+        Vector3 moveDirection = forward * z + right * x;
+
+        _controller.Move(moveDirection.normalized * _moveSpeed * Time.deltaTime);
+        }
+        
+    }
+
+    // 旋转处理
+    void HandleRotation()
+    {
+         if (isFirstPerson)
+        {
+            float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+
+        // 上下（相机）
+        xRotation -= mouseY;
+        xRotation = Mathf.Clamp(xRotation, -40f, 80f);
+        _cameraRootFirstPerson.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+
+        // 左右（角色）
+         transform.Rotate(Vector3.up * mouseX);
+        }
+        if (!isMoving) return;
+
+       
+        if (!isFirstPerson)
+        {
+            //  第三人称
+
+            Vector3 forward = moveDir.normalized;
+            forward.y = 0;
+
+            RotateTo(forward);
         }
     }
 
-    void LateUpdate()
+    //旋转函数
+    void RotateTo(Vector3 dir)
     {
-        //相机旋转（上下看）
-        LookCamera();
+        Quaternion targetRotation = Quaternion.LookRotation(dir);
 
+        transform.rotation = Quaternion.Lerp(
+            transform.rotation,
+            targetRotation,
+            _rotateSpeed * Time.deltaTime
+        );
     }
 
-    #region 核心逻辑拆分
-    // 人物左右旋转
-    void LookRotation()
+
+    //动画控制
+    void HandleAnimation()
     {
-        float mouseX = Input.GetAxis("Mouse X") * _mouseSensitivity * Time.deltaTime;
-        transform.Rotate(Vector3.up * mouseX);
+        _animator.SetBool("IsMove", isMoving);
     }
 
-    // 相机上下旋转
-    void LookCamera()
+    // 重力处理
+    void HandleGravity()
     {
-        float mouseY = Input.GetAxis("Mouse Y") * _mouseSensitivity * Time.deltaTime;
-
-        _xRotation -= mouseY;
-        _xRotation = Mathf.Clamp(_xRotation, -70f, 30f);
-
-        // 直接设置相机根的局部旋转，不受角色旋转影响
-        _cameraRoot.localRotation = Quaternion.Euler(_xRotation, 0f, 0f);
-    }
-
-    //人物移动
-    void Move()
-    {
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
-
-        Vector3 dir = transform.right * x + transform.forward * z;
-        _controller.Move(_moveSpeed * Time.deltaTime * dir);
-
-        // 重力
         if (_controller.isGrounded && _velocity.y < 0)
             _velocity.y = -2f;
 
@@ -139,7 +247,13 @@ public class PlayerController : MonoBehaviour
                 CurrentFarmLand.FarmCurrentStatue = FarmCurrentStatus.Tilled;
             }
         }
+        PlayerEvents.Center.Trigger(PlayerEvent.ExitInteractPanel);
+
         PlayerEvents.Center.Trigger<ItemData, int>(PlayerEvent.GetItem, obj.GetComponent<ItemModel>().itemData, 1);
+        if (crop)
+        {
+            PlayerEvents.Center.Trigger<Crop>(PlayerEvent.HideCropProgress, crop);
+        }
         EquipObject(ToolBarManager.Instance.currentItemSlot.currentItemData);
         Debug.Log($"采集了{obj.name}");
         Destroy(obj);
@@ -169,17 +283,39 @@ public class PlayerController : MonoBehaviour
         }
 
         CurrentEquipMentObject = Instantiate(itemData.itemPrefab, EquipMentRoot);
+        CurrentEquipMentObject.GetComponent<Collider>().isTrigger = false; // 设置为触发器，避免物理碰撞
 
         // 这里可以实现装备物品的逻辑，如实例化装备模型并挂载到EquipMentRoot
         Debug.Log($"装备了{itemData.itemName}");
+    }
+
+    //切换相机视角 
+    void SwitchCamera()
+    {
+        isFirstPerson = !isFirstPerson;
     }
     #endregion
 
     #region 触发器逻辑
     void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("CanGetObj"))
+        if (other.CompareTag("Crop"))
         {
+            _interactText = $"拾取";
+            _interactButtonText = $"F";
+            Crop crop = other.gameObject.GetComponent<Crop>();
+            PlayerEvents.Center.Trigger<Crop>(PlayerEvent.ShowCropProgress, crop);
+            if (crop.IsMature)
+            {
+                PlayerEvents.Center.Trigger<String, String>(PlayerEvent.EnterInteractPanel, _interactText, _interactButtonText);
+                _currentCanGetObject = other.gameObject;
+            }
+        }
+        if (other.CompareTag("Equipment"))
+        {
+            _interactText = $"拾取";
+            _interactButtonText = $"F";
+            PlayerEvents.Center.Trigger<String, String>(PlayerEvent.EnterInteractPanel, _interactText, _interactButtonText);
             _currentCanGetObject = other.gameObject;
         }
         if (other.CompareTag("FarmLand"))
@@ -187,19 +323,48 @@ public class PlayerController : MonoBehaviour
             CurrentFarmLand = other.GetComponent<FarmLand>();
             Debug.Log(CurrentFarmLand.FarmCurrentStatue);
         }
+        if (other.CompareTag("Shopkeeper"))
+        {
+            _isInteracting = true;
+            _interactText = $"打开商店";
+            _interactButtonText = $"X";
+            PlayerEvents.Center.Trigger<String, String>(PlayerEvent.EnterInteractPanel, _interactText, _interactButtonText);
+            Debug.Log("进入商店范围");
+        }
     }
 
     void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("CanGetObj") && other.gameObject == _currentCanGetObject)
+        if (other.CompareTag("Crop") || other.CompareTag("Equipment"))
         {
-            _currentCanGetObject = null;
+            if (other.gameObject == _currentCanGetObject)
+            {
+                PlayerEvents.Center.Trigger(PlayerEvent.ExitInteractPanel);
+                _currentCanGetObject = null;
+            }
+            if (other.CompareTag("Crop"))
+            {
+                Crop crop = other.gameObject.GetComponent<Crop>();
+                PlayerEvents.Center.Trigger<Crop>(PlayerEvent.HideCropProgress, crop);
+            }
         }
         if (other.CompareTag("FarmLand"))
         {
             CurrentFarmLand = null;
-            Debug.Log(222222);
+        }
+        if (other.CompareTag("Shopkeeper"))
+        {
+            _isInteracting = false;
+            PlayerEvents.Center.Trigger(PlayerEvent.ExitInteractPanel);
+            Debug.Log("离开商店范围");
         }
     }
     #endregion
+
+
+
+    void OnDisable()
+    {
+        CameraEvents.Center.RemoveListener(CameraEvent.SwitchCamera, SwitchCamera);
+    }
 }

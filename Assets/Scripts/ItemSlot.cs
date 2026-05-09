@@ -16,6 +16,11 @@ public class ItemSlot : MonoBehaviour
     public ItemData currentItemData; // 当前槽位的物品数据
     public int currentItemCount; // 当前物品数量
 
+    void Awake()
+    {
+        currentItemData = null;
+        currentItemCount = 0;
+    }
 
     void OnEnable()
     {

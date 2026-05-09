@@ -6,6 +6,9 @@ TagManager:
   tags:
   - CanGetObj
   - FarmLand
+  - Shopkeeper
+  - Crop
+  - Equipment
   layers:
   - Default
   - TransparentFX
