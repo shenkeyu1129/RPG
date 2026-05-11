@@ -12,7 +12,7 @@ public enum FarmEvent
 //田的事件管理中心
 public static class FarmEvents
 {
-    public static readonly EventCenter<FarmEvent> Center = new ();
+    public static readonly EventCenter<FarmEvent> Center = new();
 }
 // 田地完整生命周期状态
 public enum FarmCurrentStatus
@@ -30,18 +30,19 @@ public class FarmLand : MonoBehaviour
     public Transform PlantPosition;
     private FarmCurrentStatus _farmCurrentStatue;
 
-    private  Renderer  _renderer;
+    private Renderer _renderer;
 
-    private Material  _material; 
-    
+    private Material _material;
+
+    [SerializeField] private GameObject border;
     public FarmCurrentStatus FarmCurrentStatue
     {
-        set 
+        set
         {
-            if(value != _farmCurrentStatue)
+            if (value != _farmCurrentStatue)
             {
                 _farmCurrentStatue = value;
-                 FarmEvents.Center.Trigger(FarmEvent.FarmStatueChanged);
+                FarmEvents.Center.Trigger(FarmEvent.FarmStatueChanged);
             }
         }
         get => _farmCurrentStatue;
@@ -50,14 +51,14 @@ public class FarmLand : MonoBehaviour
     {
         _renderer = GetComponent<Renderer>();
         _material = _renderer.material;
-        _material.color = new Color32(95,160,120,255);//绿色
-         _farmCurrentStatue = FarmCurrentStatus.Empty;
-         
+        _material.color = new Color32(95, 160, 120, 255);//绿色
+        _farmCurrentStatue = FarmCurrentStatus.Empty;
+
     }
 
     void OnEnable()
     {
-        FarmEvents.Center.AddListener(FarmEvent.FarmStatueChanged,ChangeColor);
+        FarmEvents.Center.AddListener(FarmEvent.FarmStatueChanged, ChangeColor);
     }
 
     //改变土地颜色，不同状态对应不同颜色的土地
@@ -66,8 +67,8 @@ public class FarmLand : MonoBehaviour
         switch (_farmCurrentStatue)
         {
             case FarmCurrentStatus.Empty:
-                 _material.color = new Color32(95,160,120,255);//绿色
-                 break;
+                _material.color = new Color32(95, 160, 120, 255);//绿色
+                break;
             case FarmCurrentStatus.Tilled:
                 _material.color = new Color32(128, 89, 51, 255);//浅褐色
                 break;
@@ -81,9 +82,15 @@ public class FarmLand : MonoBehaviour
         FarmEvents.Center.Trigger(FarmEvent.FarmColorChanged);
     }
 
+    //获取天地边框
+    public GameObject GetBorder()
+    {
+        return border;
+    }
+   
     void OnDisable()
     {
-         FarmEvents.Center.RemoveListener(FarmEvent.FarmStatueChanged,ChangeColor);
+        FarmEvents.Center.RemoveListener(FarmEvent.FarmStatueChanged, ChangeColor);
     }
 
 }

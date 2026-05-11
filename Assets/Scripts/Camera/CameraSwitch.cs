@@ -6,7 +6,7 @@ public class CameraSwitch : MonoBehaviour
     [SerializeField] private CinemachineFreeLook thirdPersonCam;
     [SerializeField] private CinemachineVirtualCamera firstPersonCam;
     
-    private bool isFirstPerson = false;
+    public static bool isFirstPerson = false;
 
     void Update()
     {

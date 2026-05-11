@@ -34,7 +34,7 @@ public class PlayerController : MonoBehaviour
 
     private Animator _animator;
 
-    private bool isFirstPerson = false;
+    private bool isFirstPerson;
 
     void Awake()
     {
@@ -43,6 +43,7 @@ public class PlayerController : MonoBehaviour
         CurrentEquipMentObject = null;
         EquipMentRoot = _equipMentRoot;
         _animator = GetComponent<Animator>();
+        isFirstPerson = CameraSwitch.isFirstPerson;
     }
 
     void OnEnable()
@@ -321,6 +322,8 @@ public class PlayerController : MonoBehaviour
         if (other.CompareTag("FarmLand"))
         {
             CurrentFarmLand = other.GetComponent<FarmLand>();
+            CurrentFarmLand.GetBorder().SetActive(true);
+            Debug.Log("进入田地范围");
             Debug.Log(CurrentFarmLand.FarmCurrentStatue);
         }
         if (other.CompareTag("Shopkeeper"))
@@ -350,7 +353,9 @@ public class PlayerController : MonoBehaviour
         }
         if (other.CompareTag("FarmLand"))
         {
+            CurrentFarmLand.GetBorder().SetActive(false);
             CurrentFarmLand = null;
+             Debug.Log("离开田地范围");
         }
         if (other.CompareTag("Shopkeeper"))
         {
