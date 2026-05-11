@@ -270,6 +270,17 @@ public class PlayerController : MonoBehaviour
             {
                 PlayerEvents.Center.Trigger<int>(PlayerEvent.ChangeSlot, i);
                 EquipObject(ToolBarManager.Instance.currentItemSlot.currentItemData); // 装备新物品
+
+                // 触发工具名称弹窗
+                ItemData currentItem = ToolBarManager.Instance.currentItemSlot?.currentItemData;
+                if (currentItem != null)
+                {
+                    PlayerEvents.Center.Trigger<string>(PlayerEvent.ShowToolName, currentItem.itemName);
+                }
+                else
+                {
+                    PlayerEvents.Center.Trigger(PlayerEvent.HideToolName);
+                }
             }
         }
     }

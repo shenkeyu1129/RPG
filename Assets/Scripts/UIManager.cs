@@ -8,6 +8,8 @@ public class UIManager : MonoBehaviour
 
     [SerializeField] private GameObject _shopPanel;
     [SerializeField] private GameObject _interactPanel;
+    [SerializeField] private ToolTipPanel _toolTipPanel;
+
     void OnEnable()
     {
         PlayerEvents.Center.AddListener(PlayerEvent.EnterShop,OpenShop);
@@ -16,6 +18,8 @@ public class UIManager : MonoBehaviour
         PlayerEvents.Center.AddListener(PlayerEvent.ExitInteractPanel,CloseInteractPanel);
         PlayerEvents.Center.AddListener<Crop>(PlayerEvent.ShowCropProgress,OpenCropProgressPanel);
         PlayerEvents.Center.AddListener<Crop>(PlayerEvent.HideCropProgress,CloseCropProgressPanel);
+        PlayerEvents.Center.AddListener<string>(PlayerEvent.ShowToolName,ShowToolTip);
+        PlayerEvents.Center.AddListener(PlayerEvent.HideToolName,HideToolTip);
     }
 
 
@@ -58,6 +62,18 @@ public class UIManager : MonoBehaviour
         progressBar.SetActive(false);
     }
 
+    void ShowToolTip(string itemName)
+    {
+        if (_toolTipPanel != null)
+            _toolTipPanel.Show(itemName);
+    }
+
+    void HideToolTip()
+    {
+        if (_toolTipPanel != null)
+            _toolTipPanel.Hide();
+    }
+
         void OnDisable()
     {
         PlayerEvents.Center.RemoveListener(PlayerEvent.EnterShop,OpenShop);
@@ -66,5 +82,7 @@ public class UIManager : MonoBehaviour
         PlayerEvents.Center.RemoveListener(PlayerEvent.ExitInteractPanel,CloseInteractPanel);
         PlayerEvents.Center.RemoveListener<Crop>(PlayerEvent.ShowCropProgress,OpenCropProgressPanel);
         PlayerEvents.Center.RemoveListener<Crop>(PlayerEvent.HideCropProgress,CloseCropProgressPanel);
+        PlayerEvents.Center.RemoveListener<string>(PlayerEvent.ShowToolName,ShowToolTip);
+        PlayerEvents.Center.RemoveListener(PlayerEvent.HideToolName,HideToolTip);
     }
 }

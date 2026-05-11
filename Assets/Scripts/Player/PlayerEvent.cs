@@ -1,14 +1,16 @@
-public enum PlayerEvent 
+public enum PlayerEvent
 {
     UseItem,
     ChangeSlot,
     GetItem,
     EnterShop,
-    
+
     ExitShop,
     EnterInteractPanel,
     ExitInteractPanel,
     ShowCropProgress,
-    HideCropProgress
+    HideCropProgress,
+    ShowToolName,
+    HideToolName
 
 }
