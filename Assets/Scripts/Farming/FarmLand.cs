@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -35,14 +34,49 @@ public class FarmLand : MonoBehaviour
     private Material _material;
 
     [SerializeField] private GameObject border;
+
+    // 合法转换表：每个状态能转换到什么状态
+    private static readonly Dictionary<FarmCurrentStatus, FarmCurrentStatus[]> ValidTransitions = new()
+    {
+        { FarmCurrentStatus.Empty,   new[] { FarmCurrentStatus.Tilled } },
+        { FarmCurrentStatus.Tilled,  new[] { FarmCurrentStatus.Planted } },
+        { FarmCurrentStatus.Planted, new[] { FarmCurrentStatus.Tilled } },
+    };
+
     public FarmCurrentStatus FarmCurrentStatue
     {
         set
         {
-            if (value != _farmCurrentStatue)
+            if (value == _farmCurrentStatue) return;
+
+            // 检查状态转换是否合法
+            if (ValidTransitions.TryGetValue(_farmCurrentStatue, out var allowed))
             {
-                _farmCurrentStatue = value;
-                FarmEvents.Center.Trigger(FarmEvent.FarmStatueChanged);
+                bool valid = false;
+                foreach (var s in allowed)
+                {
+                    if (s == value) { valid = true; break; }
+                }
+                if (!valid)
+                {
+                    Debug.LogWarning($"非法状态转换：{_farmCurrentStatue} → {value}");
+                    return;
+                }
+            }
+
+            _farmCurrentStatue = value;
+            FarmEvents.Center.Trigger(FarmEvent.FarmStatueChanged);
+
+            // 任务进度 + 音效
+            if (value == FarmCurrentStatus.Tilled)
+            {
+                QuestManager.Instance?.ProgressQuest(QuestObjectiveType.TillLand, amount: 1);
+                AudioEvents.Center.Trigger<string>(AudioEvent.PlaySFX, "Till");
+            }
+            else if (value == FarmCurrentStatus.Planted)
+            {
+                QuestManager.Instance?.ProgressQuest(QuestObjectiveType.PlantCrop, amount: 1);
+                AudioEvents.Center.Trigger<string>(AudioEvent.PlaySFX, "Plant");
             }
         }
         get => _farmCurrentStatue;
@@ -87,7 +121,24 @@ public class FarmLand : MonoBehaviour
     {
         return border;
     }
-   
+
+    /// <summary>
+    /// 获取当前状态（供存档读取）
+    /// </summary>
+    public FarmCurrentStatus GetCurrentStatus()
+    {
+        return _farmCurrentStatue;
+    }
+
+    /// <summary>
+    /// 直接设置状态（供存档恢复，跳过合法性校验）
+    /// </summary>
+    public void SetCurrentStatus(FarmCurrentStatus status)
+    {
+        _farmCurrentStatue = status;
+        FarmEvents.Center.Trigger(FarmEvent.FarmStatueChanged);
+    }
+
     void OnDisable()
     {
         FarmEvents.Center.RemoveListener(FarmEvent.FarmStatueChanged, ChangeColor);

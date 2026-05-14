@@ -11,6 +11,9 @@ public enum PlayerEvent
     ShowCropProgress,
     HideCropProgress,
     ShowToolName,
-    HideToolName
+    HideToolName,
+    ToggleInventory,
+    ToggleQuest,
+    GameStarted
 
 }

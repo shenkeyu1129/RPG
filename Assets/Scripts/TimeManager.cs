@@ -230,6 +230,25 @@ public class TimeManager : MonoBehaviour
         HandleTimeCarry();
         OnDayChanged?.Invoke();
     }
+
+    /// <summary>
+    /// 从存档恢复时间数据（跳过合法性校验）
+    /// </summary>
+    public void RestoreTime(int year, TimeManager.Season season, int day, int hour, int minute)
+    {
+        CurrentYear = year;
+        CurrentSeason = season;
+        CurrentDay = day;
+        CurrentHour = hour;
+        CurrentMinute = minute;
+        _minuteTimer = 0;
+        _hasTriggeredSunrise = CurrentHour >= sunriseHour;
+        _hasTriggeredSunset = CurrentHour >= sunsetHour;
+        OnHourChanged?.Invoke();
+        OnDayChanged?.Invoke();
+        OnSeasonChanged?.Invoke();
+        OnYearChanged?.Invoke();
+    }
     #endregion
 
     #region 生命周期

@@ -18,8 +18,10 @@ MonoBehaviour:
   itemPrefab: {fileID: 1269754475505960, guid: 186ecc7a1f977cc4fab5658c00fa3c4d, type: 3}
   itemDesc: this is flower _2.......
   itemType: 0
-  maxStackCount: 99
+  maxStackCount: 10
   coolDownTime: 10
+  buyPrice: 10
+  sellPrice: 5
   totalGrowDays: 3
   growStageColor:
   - {r: 1, g: 1, b: 1, a: 0}

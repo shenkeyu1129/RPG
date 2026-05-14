@@ -8,7 +8,6 @@ public class Crop : MonoBehaviour
 
     [SerializeField] private GameObject _progressBarPrefab;
      private Transform _globalCanvas;
-     private Camera _mainCamera;
     private Image _progressFill;
     private Image _backgroundImage;
     private Text _timeText;
@@ -29,7 +28,6 @@ public class Crop : MonoBehaviour
         _renderer = GetComponent<Renderer>();
         _material = _renderer.material;
         _cropData = (CropData)GetComponent<ItemModel>().itemData;
-        _mainCamera = Camera.main;
 
         _globalCanvas = GameObject.Find("ProgressBarCanvas").transform;
     }
@@ -56,8 +54,12 @@ public class Crop : MonoBehaviour
         // 同步世界位置
         _progressBarInstance.transform.position = transform.position + progressBarOffset;
 
-        // 全局Canvas的Billboard效果
-        _progressBarInstance.transform.forward = _mainCamera.transform.forward;
+        // Billboard效果：每帧从当前主相机获取朝向（支持相机切换）
+        Camera mainCam = Camera.main;
+        if (mainCam != null)
+        {
+            _progressBarInstance.transform.forward = mainCam.transform.forward;
+        }
     }
 
 

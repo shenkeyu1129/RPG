@@ -17,7 +17,9 @@ public class ItemData : ScriptableObject
     public int maxStackCount = 1; // 最大堆叠数量
     public int coolDownTime; // 冷却时间（秒）
 
-    
+    [Header("经济")]
+    public int buyPrice;   // 购买价格（0=不可购买）
+    public int sellPrice;  // 出售价格（0=不可出售）
 
     // 物品使用方法，可被子类重写
     public virtual void UseItem()

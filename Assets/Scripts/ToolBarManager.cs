@@ -1,6 +1,5 @@
 using UnityEngine;
 using System;
-using UnityEditorInternal.Profiling.Memory.Experimental;
 
 
 public class ToolBarManager : MonoBehaviour
@@ -27,8 +26,7 @@ public class ToolBarManager : MonoBehaviour
         InitAllSlots();
 
         RefreshAllSlots(); // 刷新显示，确保UI正确
-
-       
+        RefreshSlotHighlights(); // 初始化选中高亮
     }
 
     void OnEnable()
@@ -52,45 +50,64 @@ public class ToolBarManager : MonoBehaviour
         if (slotIndex < allToolSlots.Length)
         {
             currentItemSlot = allToolSlots[slotIndex];
+            RefreshSlotHighlights();
         }
     }
 
-    //拾取到物体后放入槽位
-    public void PickUpItem(ItemData itemData, int count)
+    /// <summary>
+    /// 刷新所有槽位的选中高亮（选中项显示 Border，其余隐藏）
+    /// </summary>
+    private void RefreshSlotHighlights()
     {
-
-        // 尝试放入已有相同物品的槽位
         foreach (var slot in allToolSlots)
         {
-            if (slot.currentItemData != null && slot.currentItemData.itemID == itemData.itemID)
+            slot.SetHighlight(slot == currentItemSlot);
+        }
+    }
+
+    //拾取到物体后放入槽位（受物品 maxStackCount 限制）
+    public void PickUpItem(ItemData itemData, int count)
+    {
+        int remaining = count;
+
+        // 1. 尝试堆叠到已有物品（检查 maxStackCount）
+        foreach (var slot in allToolSlots)
+        {
+            if (slot.currentItemData != null && slot.currentItemData.itemID == itemData.itemID && slot.currentItemCount < itemData.maxStackCount)
             {
-                if (currentItemSlot.currentItemData == null)
-                {
-                    currentItemSlot = slot;
-                }
-                slot.currentItemCount += count;
+                int space = itemData.maxStackCount - slot.currentItemCount;
+                int toAdd = Mathf.Min(remaining, space);
+                slot.currentItemCount += toAdd;
+                remaining -= toAdd;
                 slot.RefreshSlot();
-                return;
+                if (remaining <= 0) return;
             }
         }
 
-        // 否则放入第一个空槽位
+        // 2. 放入空槽位
         foreach (var slot in allToolSlots)
         {
             if (slot.currentItemData == null)
             {
-                if (currentItemSlot.currentItemData == null)
-                {
-                    currentItemSlot = slot;
-                }
+                int toAdd = Mathf.Min(remaining, itemData.maxStackCount);
                 slot.currentItemData = itemData;
-                slot.currentItemCount = count;
+                slot.currentItemCount = toAdd;
+                remaining -= toAdd;
                 slot.RefreshSlot();
-                return;
+                if (remaining <= 0) return;
             }
         }
 
-        Debug.Log("工具栏已满，无法拾取更多物品");
+        // 3. 剩余部分溢出到背包
+        if (remaining > 0 && InventoryManager.Instance != null)
+        {
+            InventoryManager.Instance.AddItem(itemData, remaining);
+            Debug.Log($"工具栏已满，{remaining} 个物品已放入背包");
+        }
+        else if (remaining > 0)
+        {
+            Debug.Log("工具栏已满，无法拾取更多物品");
+        }
     }
 
     // 全局刷新所有槽位（背包物品变化时调用）

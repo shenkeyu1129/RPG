@@ -35,6 +35,7 @@ public class PlayerController : MonoBehaviour
     private Animator _animator;
 
     private bool isFirstPerson;
+    private bool _gameStarted;
 
     void Awake()
     {
@@ -49,18 +50,22 @@ public class PlayerController : MonoBehaviour
     void OnEnable()
     {
         CameraEvents.Center.AddListener(CameraEvent.SwitchCamera, SwitchCamera);
+        PlayerEvents.Center.AddListener(PlayerEvent.ExitShop, OnShopClosed);
+        PlayerEvents.Center.AddListener(PlayerEvent.GameStarted, OnGameStarted);
     }
+
     void Start()
     {
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-        // 初始装备第一个物品
-        EquipObject(ToolBarManager.Instance.currentItemSlot.currentItemData);
+        // 主菜单会管理光标，游戏开始后才锁定
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
     }
 
     void Update()
     {
+        // 登录界面未关闭前不处理任何游戏输入
+        if (!_gameStarted) return;
+
         // 角色移动
         if (_canMove)
         {
@@ -70,8 +75,8 @@ public class PlayerController : MonoBehaviour
         //工具栏切换(1 - 7)
         ChangeObject();
 
-        // 物品使用
-        if (Input.GetMouseButtonDown(0))
+        // 物品使用（面板打开时不响应）
+        if (Input.GetMouseButtonDown(0) && !UIManager.IsAnyPanelOpen)
         {
             if (!CurrentEquipMentObject) return;
             UseObject(CurrentEquipMentObject);
@@ -87,6 +92,19 @@ public class PlayerController : MonoBehaviour
             GetObject(_currentCanGetObject);
         }
 
+        // 背包开关（仅 Tab）
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            PlayerEvents.Center.Trigger(PlayerEvent.ToggleInventory);
+        }
+
+        // 任务面板（Q 键）
+        if (Input.GetKeyDown(KeyCode.Q))
+        {
+            PlayerEvents.Center.Trigger(PlayerEvent.ToggleQuest);
+        }
+
+        // 商店：X 打开，关闭仅通过商店界面的关闭按钮
         if (_isInteracting)
         {
             if (Input.GetKeyDown(KeyCode.X))
@@ -94,12 +112,17 @@ public class PlayerController : MonoBehaviour
                 _canMove = false;
                 PlayerEvents.Center.Trigger(PlayerEvent.EnterShop);
                 PlayerEvents.Center.Trigger(PlayerEvent.ExitInteractPanel);
+                SetCursorLock(false);
             }
-            if (Input.GetKeyDown(KeyCode.Escape))
+        }
+
+        // F5 手动存档
+        if (Input.GetKeyDown(KeyCode.F5))
+        {
+            if (SaveManager.Instance != null)
             {
-                _canMove = true;
-                PlayerEvents.Center.Trigger(PlayerEvent.ExitShop);
-                PlayerEvents.Center.Trigger(PlayerEvent.EnterInteractPanel);
+                SaveManager.Instance.SaveGame(SaveManager.Instance.CurrentSlotIndex);
+                PlayerEvents.Center.Trigger<string>(PlayerEvent.ShowToolName, "存档成功");
             }
         }
     }
@@ -246,6 +269,8 @@ public class PlayerController : MonoBehaviour
             else
             {
                 CurrentFarmLand.FarmCurrentStatue = FarmCurrentStatus.Tilled;
+                QuestManager.Instance?.ProgressQuest(QuestObjectiveType.Harvest, 1);
+                AudioEvents.Center.Trigger<string>(AudioEvent.PlaySFX, "Harvest");
             }
         }
         PlayerEvents.Center.Trigger(PlayerEvent.ExitInteractPanel);
@@ -288,23 +313,52 @@ public class PlayerController : MonoBehaviour
     //装备物体
     void EquipObject(ItemData itemData)
     {
-        if (!itemData) return;
+        // 先卸下当前装备（无论新槽位是否有物品）
         if (EquipMentRoot.childCount != 0)
         {
-            Destroy(EquipMentRoot.GetChild(0).gameObject); // 卸下当前装备的物品
+            Destroy(EquipMentRoot.GetChild(0).gameObject);
         }
+        CurrentEquipMentObject = null;
+
+        // 空槽位：到此为止，手上不留物体
+        if (!itemData) return;
 
         CurrentEquipMentObject = Instantiate(itemData.itemPrefab, EquipMentRoot);
-        CurrentEquipMentObject.GetComponent<Collider>().isTrigger = false; // 设置为触发器，避免物理碰撞
+        CurrentEquipMentObject.GetComponent<Collider>().isTrigger = false;
 
-        // 这里可以实现装备物品的逻辑，如实例化装备模型并挂载到EquipMentRoot
+        AudioEvents.Center.Trigger<string>(AudioEvent.PlaySFX, "Equip");
         Debug.Log($"装备了{itemData.itemName}");
     }
 
-    //切换相机视角 
+    // 游戏开始（主菜单点击新游戏或继续）
+    void OnGameStarted()
+    {
+        _gameStarted = true;
+        _canMove = true;
+        // 初始装备第一个物品
+        EquipObject(ToolBarManager.Instance.currentItemSlot?.currentItemData);
+    }
+
+    // 商店关闭时统一恢复移动和鼠标锁定
+    void OnShopClosed()
+    {
+        _canMove = true;
+        SetCursorLock(true);
+    }
+
+    //切换相机视角
     void SwitchCamera()
     {
         isFirstPerson = !isFirstPerson;
+    }
+
+    /// <summary>
+    /// 设置鼠标锁定状态（打开面板时解锁，关闭面板时锁定）
+    /// </summary>
+    void SetCursorLock(bool locked)
+    {
+        Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
+        Cursor.visible = !locked;
     }
     #endregion
 
@@ -382,5 +436,7 @@ public class PlayerController : MonoBehaviour
     void OnDisable()
     {
         CameraEvents.Center.RemoveListener(CameraEvent.SwitchCamera, SwitchCamera);
+        PlayerEvents.Center.RemoveListener(PlayerEvent.ExitShop, OnShopClosed);
+        PlayerEvents.Center.RemoveListener(PlayerEvent.GameStarted, OnGameStarted);
     }
 }
